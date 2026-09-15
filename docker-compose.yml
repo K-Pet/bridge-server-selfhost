@@ -1,0 +1,112 @@
+services:
+  bridge-music:
+    # Pull pre-built image from GHCR (published by the release workflow
+    # on every push to main). Use this for Portainer stacks and any deploy
+    # path where the source isn't checked out alongside the compose file.
+    image: ghcr.io/k-pet/bridge-server:latest
+    # For local-source workflows (developing inside this repo), comment out
+    # the `image:` line above and uncomment the build block below.
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: bridge-server
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      # Music library: bind-mounted so you can drop files in from the
+      # host (e.g. rsync, manual imports). Override MUSIC_DIR in .env to
+      # point at the disk where your library lives.
+      - ${MUSIC_DIR:-./data/music}:/data/music
+      # Internal state: named Docker volumes. These survive stack
+      # recreation under Portainer / `docker compose down -v ...up` —
+      # relative bind mounts (the previous default) re-resolve against
+      # whatever directory the stack happens to be deployed from, which
+      # silently dropped Navidrome's DB and the bridge-server admin
+      # credentials on every Portainer "Update stack". Named volumes
+      # live under /var/lib/docker/volumes/ and are pinned by name.
+      - bridge-navidrome:/data/navidrome
+      - bridge-data:/data/bridge
+    environment:
+      # ── User-facing config ──────────────────────────────────────────
+      # Friendly name shown in the marketplace ("Living Room", etc.).
+      BRIDGE_LABEL: ${BRIDGE_LABEL:-My Bridge Server}
+      # Publicly-reachable URL of this server. The marketplace fans
+      # purchases out to ${BRIDGE_EXTERNAL_URL}/api/webhook/purchase.
+      # Use a real domain or a Cloudflare Tunnel URL — see
+      # README.md.
+      BRIDGE_EXTERNAL_URL: ${BRIDGE_EXTERNAL_URL}
+
+      # ── Who the server runs as ──────────────────────────────────────
+      # The container drops to this uid/gid before starting either
+      # process. Default 1000 is right on a fresh Linux host; set these
+      # to match your music share's owner if it lives on a NAS, since
+      # that is the one directory whose ownership we can't change for
+      # you. `stat -c '%u:%g' /path/to/music` tells you what to put here.
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+
+      # ── Auto-managed (do not set unless you know why) ──────────────
+      # Delivery needs no configuration. The marketplace pushes each
+      # purchase to ${BRIDGE_EXTERNAL_URL}/api/webhook/purchase, and the
+      # server also checks with the marketplace every 15 minutes for
+      # anything that push missed — so a server that can't be reached
+      # from the internet still receives its purchases, just later.
+      # BRIDGE_SERVER_ID and BRIDGE_WEBHOOK_SECRET are auto-minted at
+      # first boot and persisted to /data/bridge/credentials.json. To
+      # rotate either, delete that file and restart — the marketplace
+      # will re-pair on the next user sign-in.
+      # BRIDGE_SUPABASE_URL / BRIDGE_SUPABASE_ANON_KEY are baked into
+      # the image; override at build time with --build-arg if you fork
+      # the project.
+    # Lets Portainer / docker swarm tell at a glance whether the
+    # container is actually healthy (the s6 init succeeds before
+    # bridge-server's own port opens, so a port-only liveness probe
+    # would lie during boot).
+    # Neither process needs to gain privileges after start, and neither
+    # needs any Linux capability — they bind unprivileged ports and only
+    # touch /data. Dropping both closes off a whole class of escalation
+    # from a compromised ffmpeg or a bug in either binary.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Add back only what the root init actually needs:
+    #   CHOWN + FOWNER + DAC_OVERRIDE — init-perms takes ownership of the
+    #     data volumes on upgrade, and has to traverse dirs it doesn't
+    #     own yet to do it.
+    #   SETUID + SETGID — s6-setuidgid drops each service to `bridge`.
+    # Dropping ALL without these is not "more secure", it's a container
+    # that exits 111 before it starts: s6's preinit chowns /run and dies
+    # without CAP_CHOWN. Everything else (NET_RAW, MKNOD, SYS_CHROOT,
+    # AUDIT_WRITE, SETFCAP, SETPCAP, KILL) stays dropped.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+
+    # Resource ceilings. On a single-tenant box these are generous; on a
+    # shared host they are what stops one customer's library scan or
+    # import from starving everyone else. Tune per tenant — see
+    # README.md.
+    cpus: ${BRIDGE_CPUS:-2.0}
+    mem_limit: ${BRIDGE_MEMORY:-2g}
+    pids_limit: ${BRIDGE_PIDS:-512}
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# Named volumes — see notes on the bridge-music service above.
+# To migrate existing data from the old `./data/{navidrome,bridge}` bind
+# mounts, run `docker run --rm -v "$PWD/data/navidrome:/src" -v
+# bridge-navidrome:/dst alpine cp -a /src/. /dst/` (and the same for
+# bridge-data) before bringing the new stack up.
+volumes:
+  bridge-navidrome:
+  bridge-data:
