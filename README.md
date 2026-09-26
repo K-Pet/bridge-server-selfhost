@@ -229,6 +229,23 @@ Losing `bridge-data` means the server gets a new identity and you have
 to link it again. You can also download your whole library as a zip
 from **Settings → Your library**.
 
+### Moving to another machine
+
+Named volumes stay on the old machine when you copy this folder. To move:
+
+1. On the old machine, take the backup above, then `docker compose down`.
+2. On the new machine, copy this folder and your music, restore both
+   volumes, and run `docker compose up -d`.
+3. If the public address changed, update `BRIDGE_EXTERNAL_URL` in `.env`.
+   The server tells Bridge Music its new address within a minute of
+   starting.
+
+If you start fresh instead, without restoring `bridge-data`, sign in and
+press **Link**. Your account moves to the new server, and so do your
+purchases: Redeliver and automatic delivery both go to the new machine.
+Playlists and play counts only come along if you restore
+`bridge-navidrome`.
+
 ---
 
 ## 8. Troubleshooting
