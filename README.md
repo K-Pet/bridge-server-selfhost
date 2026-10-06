@@ -7,7 +7,11 @@ Subsonic-compatible app.
 
 This repository has only what you need to install the server: a
 `docker-compose.yml`, an `.env.example`, and the open-source notices.
-The image is `ghcr.io/k-pet/bridge-server`.
+The image is `public.ecr.aws/r5n8t3v1/bridge-server` on Amazon ECR Public: anyone can
+pull it, with no account and no `docker login`. Releases and their notes
+are on this repository's
+[Releases](https://github.com/K-Pet/bridge-server-selfhost/releases)
+page.
 
 When you finish this guide you'll have:
 
@@ -171,6 +175,20 @@ The server includes Navidrome. Its web UI and Subsonic API are at
 
 ## 6. Updating
 
+**Which version you run.** The server shows it at the bottom of its
+sidebar, and in **Settings → Status** with the build
+(`0.9.0 (build 1a2b3c4)`). From a terminal:
+
+```bash
+curl -s http://localhost:8888/api/config | grep -o '"version":"[^"]*"'
+```
+
+Once a day the server checks this repository's latest release, and
+Settings shows "0.9.1 is available — release notes" when there is a
+newer one. That check is one anonymous request to `api.github.com` and
+sends nothing about your server. To turn it off, add
+`BRIDGE_UPDATE_CHECK=false` to `.env` and run `docker compose up -d`.
+
 **Back up Navidrome's data first.** A newer Navidrome upgrades its
 database on first start, and an older image can't open it afterwards.
 
@@ -188,11 +206,20 @@ docker compose pull
 docker compose up -d
 ```
 
-To roll back, stop the stack, restore that backup into the
-`bridge-navidrome` volume, then start the older image.
+**Pinning a version.** `:latest` always moves to the newest build. To
+update only when you choose, change `image:` in `docker-compose.yml`
+to a release, for example:
 
-To pin a version, change `image:` in `docker-compose.yml` from `:latest`
-to a release tag such as `ghcr.io/k-pet/bridge-server:1.2.3`.
+```yaml
+    image: public.ecr.aws/r5n8t3v1/bridge-server:0.9.0
+```
+
+When Settings says a new version is out, change the number and run the
+two commands above.
+
+To roll back, stop the stack, restore that backup into the
+`bridge-navidrome` volume, set `image:` to the older release, then
+start it.
 
 ---
 

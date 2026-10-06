@@ -1,6 +1,6 @@
 # Third-party notices
 
-The Bridge Music Server container image (`ghcr.io/k-pet/bridge-server`)
+The Bridge Music Server container image (`public.ecr.aws/r5n8t3v1/bridge-server`)
 bundles the Bridge server, which is proprietary (see `LICENSE`), with
 the independent third-party programs listed below. Each one keeps its
 own licence. The Bridge server talks to Navidrome only over HTTP, as a
@@ -13,14 +13,14 @@ file at `GET /api/licenses` (Settings → About → Open-source licences).
 
 ---
 
-## Navidrome 0.63.2
+## Navidrome 0.64.0
 
 - **Licence:** GNU General Public License v3.0. The full text is in
   `licenses/GPL-3.0.txt`.
 - **Copyright:** Deluan Quintão and the Navidrome contributors.
 - **What ships:** the unmodified `navidrome` binary from the official
-  `deluan/navidrome:0.63.2` image, installed at `/app/navidrome`.
-- **Corresponding source:** https://github.com/navidrome/navidrome/tree/v0.63.2.
+  `deluan/navidrome:0.64.0` image, installed at `/app/navidrome`.
+- **Corresponding source:** https://github.com/navidrome/navidrome/tree/v0.64.0.
   A copy of the source archive for this exact version is also attached
   to the matching release of https://github.com/k-pet/bridge-server-selfhost.
 
@@ -70,10 +70,10 @@ than installing licence files. To list every package in the image with
 its version and licence:
 
 ```sh
-docker run --rm --entrypoint apk ghcr.io/k-pet/bridge-server:latest list --installed
+docker run --rm --entrypoint apk public.ecr.aws/r5n8t3v1/bridge-server:latest list --installed
 
 # One package's licence, description and files
-docker run --rm --entrypoint sh ghcr.io/k-pet/bridge-server:latest \
+docker run --rm --entrypoint sh public.ecr.aws/r5n8t3v1/bridge-server:latest \
   -c 'apk info --license ffmpeg && apk info -d ffmpeg && apk info -L ffmpeg'
 ```
 
@@ -149,3 +149,23 @@ when you identify music.
   cover images. Each image stays under the rights of its uploader or
   copyright holder. The server stores a fetched cover only next to the
   music it belongs to, in your own library.
+- **Wikidata, Wikimedia Commons and Wikipedia** (https://www.wikidata.org,
+  https://commons.wikimedia.org, https://en.wikipedia.org), projects of
+  the Wikimedia Foundation, supply artist photographs. Starting from an
+  artist's MusicBrainz id, the server reads the artist's Wikidata item
+  (its "image" claim) or, failing that, the lead image of the artist's
+  English Wikipedia article, and accepts only files hosted on Wikimedia
+  Commons, whose licence is machine-readable. For each photograph it
+  records the file page, author and licence (CC0, public domain,
+  CC BY or CC BY-SA in nearly every case) and shows them as a credit
+  line on the artist page to everyone who can see the photo, as those
+  licences require. The image is copied byte for byte at the size
+  Commons renders it — never cropped, re-encoded or otherwise adapted —
+  so no derivative work is created. Wikidata's structured data is CC0;
+  Wikipedia text is CC BY-SA but none of it is stored. Requests carry the
+  User-Agent Wikimedia's policy asks for
+  (`bridge-server/<version> ( https://bridgemusic.app )`) and are paced
+  to about one per second. The texts of the two attribution licences are
+  in `licenses/CC-BY-4.0.txt` and `licenses/CC-BY-SA-4.0.txt`; each
+  photo's own licence, which may be an earlier version, is linked from
+  its credit line.

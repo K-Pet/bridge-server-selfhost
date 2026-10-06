@@ -1,9 +1,11 @@
 services:
   bridge-music:
-    # Pull pre-built image from GHCR (published by the release workflow
-    # on every push to main). Use this for Portainer stacks and any deploy
-    # path where the source isn't checked out alongside the compose file.
-    image: ghcr.io/k-pet/bridge-server:latest
+    # The published image on Amazon ECR Public (no login needed), copied
+    # there by the release pipeline from main (:latest) and from release
+    # tags (:0.9.0 …; see README.md). Pin a tag to update on your
+    # own schedule. Use this for Portainer stacks and any deploy path
+    # where the source isn't checked out alongside the compose file.
+    image: public.ecr.aws/r5n8t3v1/bridge-server:latest
     # For local-source workflows (developing inside this repo), comment out
     # the `image:` line above and uncomment the build block below.
     # build:
